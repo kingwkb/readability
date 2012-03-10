@@ -1,8 +1,8 @@
 
-* readability
+# readability
 
 from arc90labs-readability version 1.7.1
 
-demo: <http://yanhgao.org/tools/readability
+demo: <http://yanhgao.org/tools/readability>
 
 
