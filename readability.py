@@ -202,12 +202,13 @@ class Readability:
             attributeValues = ""
             for attribute in target.attrs:
                 #
-                attributeValues += target.get(attribute[0])
+                get_attr = target.get(attribute[0])
+                attributeValues += get_attr if get_attr is not None else ''
 
             if isEmbed and self.regexps['videos'].search(attributeValues):
                 continue
 
-            if isEmbed and self.regexps['videos'].search(target.encode_contents()):
+            if isEmbed and self.regexps['videos'].search(target.encode_contents().decode()):
                 continue
             target.extract()
 
