@@ -90,7 +90,6 @@ class Readability:
     def grabArticle(self):
 
         for elem in self.html.find_all(True):
-            iou = elem.get('class','')
             unlikelyMatchString = elem.get('id','')+''.join(elem.get('class',''))
 
             if self.regexps['unlikelyCandidates'].search(unlikelyMatchString) and \
