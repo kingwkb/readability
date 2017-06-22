@@ -9,18 +9,16 @@ from __future__ import division
 import os
 import sys
 import urllib
-from urllib import parse
-#import urlparse
+import urlparse
 import re
-from html.parser import HTMLParser
+import HTMLParser
 import math
-#import urlparse
+import urlparse
 import posixpath
 
 import chardet
-#from BeautifulSoup import BeautifulSoup
-from bs4 import BeautifulSoup
-
+from BeautifulSoup import BeautifulSoup
+#from bs4 import BeautifulSoup
 
 class Readability:
 
@@ -48,7 +46,7 @@ class Readability:
         'prevLink': re.compile("(prev|earl|old|new|<|«)",re.I)
     }
 
-    def __init__(self, input_html, url):
+    def __init__(self, input, url):
         """
         url = "http://yanghao.org/blog/"
         htmlcode = urllib2.urlopen(url).read().decode('utf-8')
@@ -60,11 +58,12 @@ class Readability:
         """
         self.candidates = {}
 
-        self.input_html = input_html
+        self.input = input
         self.url = url
-        self.input_html = self.regexps['replaceBrs'].sub("</p><p>", self.input_html)
-        self.input_html = self.regexps['replaceFonts'].sub("<\g<1>span>", self.input_html)
-        self.html = BeautifulSoup(self.input_html, 'html.parser')
+        self.input = self.regexps['replaceBrs'].sub("</p><p>",self.input)
+        self.input = self.regexps['replaceFonts'].sub("<\g<1>span>",self.input)
+
+        self.html = BeautifulSoup(self.input)
 
 #        print self.html.originalEncoding
 #        print self.html
@@ -75,22 +74,24 @@ class Readability:
         self.title = self.getArticleTitle()
         self.content = self.grabArticle()
 
+
     def removeScript(self):
-        for elem in self.html.find_all("script"):
+        for elem in self.html.findAll("script"):
             elem.extract()
 
     def removeStyle(self):
-        for elem in self.html.find_all("style"):
+        for elem in self.html.findAll("style"):
             elem.extract()
 
     def removeLink(self):
-        for elem in self.html.find_all("link"):
+        for elem in self.html.findAll("link"):
             elem.extract()
 
     def grabArticle(self):
 
-        for elem in self.html.find_all(True):
-            unlikelyMatchString = elem.get('id','')+''.join(elem.get('class',''))
+        for elem in self.html.findAll(True):
+
+            unlikelyMatchString = elem.get('id','')+elem.get('class','')
 
             if self.regexps['unlikelyCandidates'].search(unlikelyMatchString) and \
                 not self.regexps['okMaybeItsACandidate'].search(unlikelyMatchString) and \
@@ -102,11 +103,11 @@ class Readability:
 #                pass
 
             if elem.name == 'div':
-                s = elem.encode_contents()
-                if not self.regexps['divToPElements'].search(s.decode()):
+                s = elem.renderContents(encoding=None)
+                if not self.regexps['divToPElements'].search(s):
                     elem.name = 'p'
 
-        for node in self.html.find_all('p'):
+        for node in self.html.findAll('p'):
 
             parentNode = node.parent
             grandParentNode = parentNode.parent
@@ -148,9 +149,9 @@ class Readability:
         topCandidate = None
 
         for key in self.candidates:
-            #            print '======================='
-            #            print self.candidates[key]['score']
-            #            print self.candidates[key]['node']
+#            print '======================='
+#            print self.candidates[key]['score']
+#            print self.candidates[key]['node']
 
             self.candidates[key]['score'] = self.candidates[key]['score'] * \
                                             (1 - self.getLinkDensity(self.candidates[key]['node']))
@@ -166,6 +167,7 @@ class Readability:
             content = self.cleanArticle(content)
         return content
 
+
     def cleanArticle(self, content):
 
         self.cleanStyle(content)
@@ -173,7 +175,7 @@ class Readability:
         self.clean(content, 'object')
         self.cleanConditionally(content, "form")
 
-        if len(content.find_all('h2')) == 1:
+        if len(content.findAll('h2')) == 1:
             self.clean(content, 'h2')
 
         self.clean(content, 'iframe')
@@ -184,15 +186,15 @@ class Readability:
 
         self.fixImagesPath(content)
 
-        content = content.encode_contents()
+        content = content.renderContents(encoding=None)
 
-        content = self.regexps['killBreaks'].sub("<br />", content.decode())
+        content = self.regexps['killBreaks'].sub("<br />", content)
 
         return content
 
     def clean(self,e ,tag):
 
-        targetList = e.find_all(tag)
+        targetList = e.findAll(tag)
         isEmbed = 0
         if tag =='object' or tag == 'embed':
             isEmbed = 1
@@ -200,25 +202,24 @@ class Readability:
         for target in targetList:
             attributeValues = ""
             for attribute in target.attrs:
-                #
-                get_attr = target.get(attribute[0])
-                attributeValues += get_attr if get_attr is not None else ''
+                attributeValues += target[attribute[0]]
 
             if isEmbed and self.regexps['videos'].search(attributeValues):
                 continue
 
-            if isEmbed and self.regexps['videos'].search(target.encode_contents().decode()):
+            if isEmbed and self.regexps['videos'].search(target.renderContents(encoding=None)):
                 continue
             target.extract()
 
     def cleanStyle(self, e):
-        for elem in e.find_all(True):
+
+        for elem in e.findAll(True):
             del elem['class']
             del elem['id']
             del elem['style']
 
     def cleanConditionally(self, e, tag):
-        tagsList = e.find_all(tag)
+        tagsList = e.findAll(tag)
 
         for node in tagsList:
             weight = self.getClassWeight(node)
@@ -231,12 +232,12 @@ class Readability:
             if weight + contentScore < 0:
                 node.extract()
             else:
-                p = len(node.find_all("p"))
-                img = len(node.find_all("img"))
-                li = len(node.find_all("li"))-100
-                input_html = len(node.find_all("input_html"))
+                p = len(node.findAll("p"))
+                img = len(node.findAll("img"))
+                li = len(node.findAll("li"))-100
+                input = len(node.findAll("input"))
                 embedCount = 0
-                embeds = node.find_all("embed")
+                embeds = node.findAll("embed")
                 for embed in embeds:
                     if not self.regexps['videos'].search(embed['src']):
                         embedCount += 1
@@ -248,7 +249,7 @@ class Readability:
                     toRemove = True
                 elif li > p and tag != "ul" and tag != "ol":
                     toRemove = True
-                elif input_html > math.floor(p/3):
+                elif input > math.floor(p/3):
                     toRemove = True
                 elif contentLength < 25 and (img==0 or img>2):
                     toRemove = True
@@ -262,6 +263,7 @@ class Readability:
                 if toRemove:
                     node.extract()
 
+
     def getArticleTitle(self):
         title = ''
         try:
@@ -270,6 +272,7 @@ class Readability:
             pass
 
         return title
+
 
     def initializeNode(self, node):
         contentScore = 0
@@ -304,7 +307,7 @@ class Readability:
         return weight
 
     def getLinkDensity(self, node):
-        links = node.find_all('a')
+        links = node.findAll('a')
         textLength = len(node.text)
 
         if textLength == 0:
@@ -316,7 +319,7 @@ class Readability:
         return linkLength / textLength
 
     def fixImagesPath(self, node):
-        imgs = node.find_all('img')
+        imgs = node.findAll('img')
         for img in imgs:
             src = img.get('src',None)
             if not src:
@@ -324,10 +327,10 @@ class Readability:
                 continue
 
             if 'http://' != src[:7] and 'https://' != src[:8]:
-                newSrc = parse.urljoin(self.url, src)
+                newSrc = urlparse.urljoin(self.url, src)
 
-                newSrcArr = parse.urlparse(newSrc)
+                newSrcArr = urlparse.urlparse(newSrc)
                 newPath = posixpath.normpath(newSrcArr[2])
-                newSrc = parse.urlunparse((newSrcArr.scheme, newSrcArr.netloc, newPath,
+                newSrc = urlparse.urlunparse((newSrcArr.scheme, newSrcArr.netloc, newPath,
                                               newSrcArr.params, newSrcArr.query, newSrcArr.fragment))
                 img['src'] = newSrc
